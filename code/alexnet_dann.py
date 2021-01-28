@@ -11,6 +11,22 @@ model_urls = {
 }
 
 
+class ReverseLayerF(Function):
+    # Forwards identity
+    # Sends backward reversed gradients
+    @staticmethod
+    def forward(ctx, x, alpha):
+        ctx.alpha = alpha
+
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        output = grad_output.neg() * ctx.alpha
+
+        return output, None
+
+
 class AlexNet(nn.Module):
 
     def __init__(self, num_classes=1000):
@@ -83,21 +99,13 @@ def alexnet(pretrained=False, progress=True, **kwargs):
     if pretrained:
         state_dict = load_state_dict_from_url(model_urls['alexnet'],progress=progress)
         model.load_state_dict(state_dict,strict=False)
+        ##Copy the classifier weight to this new classifier
+        model.classifier_domain[1].weight.data.copy_(model.classifier[1].weight.data)
+        model.classifier_domain[1].bias.data.copy_(model.classifier[1].bias.data)
+        model.classifier_domain[4].weight.data.copy_(model.classifier[4].weight.data)
+        model.classifier_domain[4].bias.data.copy_(model.classifier[4].bias.data)
+        model.classifier_domain[6].weight.data.copy_(model.classifier[6].weight.data)
+        model.classifier_domain[6].bias.data.copy_(model.classifier[6].bias.data)
     return model
 
 
-
-class ReverseLayerF(Function):
-    # Forwards identity
-    # Sends backward reversed gradients
-    @staticmethod
-    def forward(ctx, x, alpha):
-        ctx.alpha = alpha
-
-        return x.view_as(x)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        output = grad_output.neg() * ctx.alpha
-
-        return output, None
